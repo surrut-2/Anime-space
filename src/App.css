@@ -1,0 +1,710 @@
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root {
+  --bg: #0a0a10;
+  --panel: #14131c;
+  --panel-alt: #1b1a27;
+  --line: #292736;
+  --text: #f1eef7;
+  --muted: #8d879c;
+  --crimson: #ff3b5c;
+  --gold: #f5a623;
+  --indigo: #5b6eff;
+  --radius-lg: 22px;
+  --radius-md: 14px;
+  --font-display: "Futura", "Trebuchet MS", "Arial Narrow", sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 20% 15%, #1c1430 0%, transparent 45%),
+    radial-gradient(circle at 85% 80%, #14202f 0%, transparent 50%), #05050a;
+  font-family: var(--font-body);
+  color: var(--text);
+  padding: 20px 12px;
+}
+
+#root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* ============================================================
+   PHONE FRAME
+   Sized to fit inside a viewport with room to spare, so the
+   status bar and bottom nav are both visible without scrolling
+   when previewed in a browser's device-emulation mode.
+   ============================================================ */
+.phone {
+  width: min(360px, 92vw);
+  height: min(720px, 88vh);
+  background: var(--bg);
+  border-radius: 40px;
+  border: 8px solid #1a1824;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6), inset 0 0 0 1px #000;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* On real phone-width viewports (device emulation, actual mobile),
+   drop the decorative bezel entirely so the mock UI fills the
+   real screen edge-to-edge — nothing to scroll to see top/bottom. */
+@media (max-width: 480px) {
+  body {
+    padding: 0;
+  }
+  .phone {
+    width: 100vw;
+    height: 100dvh;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* Desktop two-column layout */
+@media (min-width: 900px) {
+  .phone.desktop {
+    width: 100%;
+    max-width: 1200px;
+    height: calc(100vh - 48px);
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 6px 30px rgba(0,0,0,0.6);
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    grid-template-rows: 1fr;
+    gap: 0;
+    padding: 0;
+  }
+  .phone.desktop .left-col { display:flex; flex-direction:column; border-right:1px solid var(--line); overflow:hidden; }
+  .phone.desktop .right-col { display:flex; flex-direction:column; overflow:hidden; }
+  .phone.desktop .left-col .screen { flex:1 1 auto; overflow:auto; }
+  .phone.desktop .left-col .bottom-nav { flex-direction:column; border-top: none; border-left: none; padding: 12px 8px; width: 72px; }
+  .phone.desktop .left-col .bottom-nav .nav-btn { flex: none; padding: 12px 6px; }
+  .phone.desktop .left-col .group-list { flex:1 1 auto; overflow:auto; }
+}
+
+.statusbar {
+  height: 40px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding: 0 26px;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.screen {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg);
+}
+
+/* ============================================================
+   SHARED: BOTTOM NAV
+   ============================================================ */
+.bottom-nav {
+  flex: 0 0 auto;
+  display: flex;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  padding: 10px 8px 18px;
+}
+
+.nav-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 6px 0;
+}
+
+.nav-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke: var(--muted);
+}
+
+.nav-btn.active {
+  color: var(--crimson);
+}
+
+.nav-btn.active svg {
+  stroke: var(--crimson);
+}
+
+/* ============================================================
+   SCREEN 1 — GROUPS LIST
+   ============================================================ */
+.groups-header {
+  flex: 0 0 auto;
+  padding: 14px 20px 10px;
+}
+
+.groups-header h1 {
+  font-family: var(--font-display);
+  font-size: 30px;
+  letter-spacing: 0.02em;
+  margin: 0 0 14px;
+  font-weight: 700;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+}
+
+.search-bar svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  stroke: var(--muted);
+}
+
+.search-bar input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  width: 100%;
+}
+
+.search-bar input::placeholder {
+  color: var(--muted);
+}
+
+.list-label {
+  margin: 16px 20px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.list-label::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  display: inline-block;
+}
+
+.group-list {
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding: 4px 12px 12px;
+}
+
+.group-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 8px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.group-row:hover,
+.group-row:active {
+  background: var(--panel-alt);
+}
+
+.group-badge {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  color: #0a0a10;
+  background: var(--accent, var(--crimson));
+}
+
+.group-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.group-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.group-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.group-time {
+  font-size: 11px;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.group-preview {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+/* ============================================================
+   SCREEN 2 — CHAT VIEW
+   ============================================================ */
+.chat-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.icon-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--text);
+}
+
+.chat-title {
+  flex: 1 1 auto;
+}
+
+.chat-title .name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.chat-title .status {
+  font-size: 11px;
+  color: var(--gold);
+}
+
+.messages {
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.empty-state {
+  margin: auto;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  max-width: 220px;
+  line-height: 1.5;
+}
+
+.msg-bubble {
+  max-width: 75%;
+  align-self: flex-end;
+  background: linear-gradient(135deg, var(--crimson), #c72248);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 16px 16px 4px 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.msg-bubble a {
+  color: #ffe1e8;
+  text-decoration: underline;
+}
+
+.chat-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.chat-toolbar .icon-btn svg {
+  stroke: var(--gold);
+}
+
+.chat-toolbar input {
+  flex: 1 1 auto;
+  background: var(--panel-alt);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 10px 16px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+}
+
+.chat-toolbar input::placeholder {
+  color: var(--muted);
+}
+
+.send-btn {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--crimson);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.send-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ============================================================
+   SCREEN 3 — PROFILE
+   ============================================================ */
+.profile-screen {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 24px;
+}
+
+.avatar-circle {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--indigo), var(--crimson));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-circle svg {
+  width: 46px;
+  height: 46px;
+  stroke: #fff;
+}
+
+.profile-email {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.logout-btn {
+  margin-top: 10px;
+  padding: 12px 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--crimson);
+  background: none;
+  color: var(--crimson);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 59, 92, 0.08);
+}
+
+/* ============================================================
+   SCREEN 4 — AUTH
+   ============================================================ */
+.auth-screen {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 28px;
+  gap: 22px;
+}
+
+.auth-heading h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  margin: 0 0 6px;
+}
+
+.auth-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-form label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.auth-form input {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+}
+
+.auth-form input:focus {
+  border-color: var(--crimson);
+}
+
+.auth-submit {
+  margin-top: 6px;
+  padding: 13px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--crimson);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 4px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.google-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.auth-switch {
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.auth-switch button {
+  background: none;
+  border: none;
+  color: var(--gold);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+}
+
+/* Buttons used in various places */
+.btn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.btn.primary {
+  background: var(--crimson);
+  border-color: var(--crimson);
+  color: #fff;
+}
+
+/* Simple modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  z-index: 2000;
+}
+.modal {
+  background: var(--panel);
+  color: var(--text);
+  padding: 18px;
+  border-radius: 12px;
+  width: min(420px, calc(100% - 40px));
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+
+/* Chat message styles */
+.messages { position: relative; }
+.msg-row { display: flex; gap: 10px; align-items: flex-start; padding: 6px 12px; }
+.msg-row.own { justify-content: flex-end; flex-direction: row-reverse; }
+.msg-row.other { justify-content: flex-start; flex-direction: row; }
+.msg-meta { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 40px; }
+.msg-avatar { width: 28px; height: 28px; border-radius: 6px; object-fit: cover; }
+.msg-wrap { max-width: 50vw; position: relative; align-self: flex-start; }
+.msg-wrap .msg-username { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.msg-row.other .msg-wrap .msg-username { text-align: left; }
+.msg-row.own .msg-wrap .msg-username { text-align: right; }
+.msg-bubble { padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.4; cursor: pointer; white-space: normal; overflow-wrap: break-word; word-break: normal; }
+.own-bubble { background: linear-gradient(135deg, var(--crimson), #c72248); color: #fff; border-radius: 16px 16px 4px 16px; }
+.other-bubble { background: linear-gradient(135deg, #2b2b3a, #1f1f2b); color: #fff; border-radius: 16px 16px 16px 4px; }
+.msg-reply { background: rgba(255,255,255,0.04); padding: 6px 8px; border-radius: 8px; margin-bottom: 6px; cursor: pointer; }
+.msg-reply-text { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
+.bubble-actions { position: absolute; right: -10px; top: -6px; display: flex; gap: 6px; background: transparent; }
+.bubble-actions .action { padding: 6px 8px; border-radius: 999px; border: none; background: rgba(0,0,0,0.4); color: #fff; cursor: pointer; }
+.bubble-actions .action svg { width: 14px; height: 14px; stroke: #fff; }
+
+/* Position actions slightly outside the bubble without overlapping */
+.msg-row.other .bubble-actions { right: -44px; left: auto; }
+.msg-row.own .bubble-actions { left: -44px; right: auto; }
+
+/* Spinner used when loading more messages */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.08);
+  border-top-color: var(--crimson);
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Placeholder skeleton styles */
+.placeholder { background: rgba(255,255,255,0.03); border-radius: 8px; height: 12px; }
+.msg-bubble.placeholder { height: 14px; }
+.reply-preview { background: rgba(0,0,0,0.25); padding: 6px 8px; border-radius: 8px; color: var(--muted); margin-bottom: 6px; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
