@@ -52,9 +52,10 @@ body {
 
 /* ============================================================
    PHONE FRAME
-   Sized to fit inside a viewport with room to spare, so the
-   status bar and bottom nav are both visible without scrolling
-   when previewed in a browser's device-emulation mode.
+   Only used above the desktop breakpoint's own max viewport, as a
+   decorative preview frame. Below 900px the layout is single-column
+   and fills the real viewport edge-to-edge (see the max-width:899px
+   rule below) — there is no in-between "shrunk phone in a void" state.
    ============================================================ */
 .phone {
   width: min(360px, 92vw);
@@ -69,10 +70,12 @@ body {
   flex-direction: column;
 }
 
-/* On real phone-width viewports (device emulation, actual mobile),
-   drop the decorative bezel entirely so the mock UI fills the
-   real screen edge-to-edge — nothing to scroll to see top/bottom. */
-@media (max-width: 480px) {
+/* Below the desktop breakpoint (phones, and any narrower browser window —
+   not just device-emulation widths), drop the decorative bezel entirely
+   so the UI fills the real viewport edge-to-edge. This matches the 900px
+   threshold App.jsx uses to switch into the desktop 3-pane layout, so
+   there's no gap width where a tiny bezeled mockup sits in empty space. */
+@media (max-width: 899px) {
   body {
     padding: 0;
   }
@@ -85,7 +88,7 @@ body {
   }
 }
 
-/* Desktop two-column layout */
+/* Desktop three-pane layout: vertical nav | group list | active chat/profile */
 @media (min-width: 900px) {
   .phone.desktop {
     width: 100%;
@@ -93,19 +96,50 @@ body {
     height: calc(100vh - 48px);
     border-radius: 12px;
     border: none;
-    box-shadow: 0 6px 30px rgba(0,0,0,0.6);
-    display: grid;
-    grid-template-columns: 360px 1fr;
-    grid-template-rows: 1fr;
-    gap: 0;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
     padding: 0;
   }
-  .phone.desktop .left-col { display:flex; flex-direction:column; border-right:1px solid var(--line); overflow:hidden; }
-  .phone.desktop .right-col { display:flex; flex-direction:column; overflow:hidden; }
-  .phone.desktop .left-col .screen { flex:1 1 auto; overflow:auto; }
-  .phone.desktop .left-col .bottom-nav { flex-direction:column; border-top: none; border-left: none; padding: 12px 8px; width: 72px; }
-  .phone.desktop .left-col .bottom-nav .nav-btn { flex: none; padding: 12px 6px; }
-  .phone.desktop .left-col .group-list { flex:1 1 auto; overflow:auto; }
+}
+
+.desktop-grid {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 76px minmax(280px, 340px) 1fr;
+  min-height: 0;
+  height: 100%;
+}
+
+.desktop-grid .groups-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.desktop-grid .groups-pane .screen {
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.desktop-grid .main-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.empty-chat {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 24px;
 }
 
 .statusbar {
@@ -113,12 +147,20 @@ body {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  padding: 0 26px;
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.02em;
-  color: var(--text);
+  justify-content: flex-start;
+  padding: 0 0 0 16px;
   background: var(--bg);
+}
+
+.brand-mark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+  opacity: 0.08;
+  user-select: none;
 }
 
 .screen {
@@ -130,17 +172,29 @@ body {
 }
 
 /* ============================================================
-   SHARED: BOTTOM NAV
+   SHARED: NAV (bottom bar on mobile, side rail on desktop)
    ============================================================ */
-.bottom-nav {
+.app-nav {
   flex: 0 0 auto;
   display: flex;
-  border-top: 1px solid var(--line);
   background: var(--panel);
+}
+
+.app-nav.horizontal {
+  flex-direction: row;
+  border-top: 1px solid var(--line);
   padding: 10px 8px 18px;
 }
 
-.nav-btn {
+.app-nav.vertical {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  border-right: 1px solid var(--line);
+  padding: 18px 6px;
+}
+
+.nav-item {
   flex: 1;
   background: none;
   border: none;
@@ -152,111 +206,82 @@ body {
   font-family: var(--font-body);
   font-size: 11px;
   cursor: pointer;
-  padding: 6px 0;
+  padding: 8px 2px;
+  border-radius: var(--radius-md);
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.nav-btn svg {
+.app-nav.vertical .nav-item {
+  flex: none;
+}
+
+.nav-item:hover {
+  background: var(--panel-alt);
+}
+
+.nav-icon svg {
   width: 22px;
   height: 22px;
   stroke: var(--muted);
+  transition: stroke 0.15s ease;
 }
 
-.nav-btn.active {
+.nav-item.active {
   color: var(--crimson);
 }
 
-.nav-btn.active svg {
+.nav-item.active .nav-icon svg {
   stroke: var(--crimson);
 }
 
 /* ============================================================
    SCREEN 1 — GROUPS LIST
    ============================================================ */
-.groups-header {
-  flex: 0 0 auto;
-  padding: 14px 20px 10px;
-}
-
-.groups-header h1 {
-  font-family: var(--font-display);
-  font-size: 30px;
-  letter-spacing: 0.02em;
-  margin: 0 0 14px;
-  font-weight: 700;
-}
-
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-}
-
-.search-bar svg {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-  stroke: var(--muted);
-}
-
-.search-bar input {
-  background: none;
-  border: none;
-  outline: none;
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 14px;
-  width: 100%;
-}
-
-.search-bar input::placeholder {
-  color: var(--muted);
-}
-
-.list-label {
-  margin: 16px 20px 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--gold);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.list-label::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--gold);
-  display: inline-block;
-}
-
 .group-list {
   flex: 1 1 auto;
-  overflow: hidden;
-  padding: 4px 12px 12px;
+  overflow-y: auto;
+  padding: 6px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
 
-.group-row {
+.group-card {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 12px 8px;
+  padding: 12px 10px;
   border-radius: var(--radius-md);
   cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font: inherit;
   transition: background 0.15s ease;
 }
 
-.group-row:hover,
-.group-row:active {
+.group-card:hover,
+.group-card:active,
+.group-card.active {
   background: var(--panel-alt);
 }
 
-.group-badge {
+.group-card--selectable {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  margin-bottom: 8px;
+}
+
+.group-card:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.group-avatar {
   flex: 0 0 auto;
   width: 48px;
   height: 48px;
@@ -268,39 +293,41 @@ body {
   font-weight: 700;
   font-size: 18px;
   color: #0a0a10;
-  background: var(--accent, var(--crimson));
+  background: var(--gold);
 }
 
-.group-info {
+.group-copy {
   flex: 1 1 auto;
   min-width: 0;
-}
-
-.group-top {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.group-name {
+.group-copy strong {
   font-weight: 600;
   font-size: 15px;
 }
 
-.group-time {
-  font-size: 11px;
-  color: var(--muted);
-  flex: 0 0 auto;
-}
-
-.group-preview {
+.group-copy small {
   font-size: 13px;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
+}
+
+.group-preview-skeleton {
+  height: 12px;
+  width: 60%;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 
 /* ============================================================
@@ -341,18 +368,37 @@ body {
   font-size: 15px;
 }
 
-.chat-title .status {
-  font-size: 11px;
-  color: var(--gold);
-}
-
 .messages {
   flex: 1 1 auto;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.messages::-webkit-scrollbar,
+.group-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.messages::-webkit-scrollbar-track,
+.group-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages::-webkit-scrollbar-thumb,
+.group-list::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+}
+
+.messages::-webkit-scrollbar-thumb:hover,
+.group-list::-webkit-scrollbar-thumb:hover {
+  background: var(--panel-alt);
 }
 
 .empty-state {
@@ -362,18 +408,6 @@ body {
   font-size: 13px;
   max-width: 220px;
   line-height: 1.5;
-}
-
-.msg-bubble {
-  max-width: 75%;
-  align-self: flex-end;
-  background: linear-gradient(135deg, var(--crimson), #c72248);
-  color: #fff;
-  padding: 10px 14px;
-  border-radius: 16px 16px 4px 16px;
-  font-size: 14px;
-  line-height: 1.4;
-  word-wrap: break-word;
 }
 
 .msg-bubble a {
@@ -427,6 +461,7 @@ body {
 .send-btn svg {
   width: 16px;
   height: 16px;
+  stroke: #fff;
 }
 
 /* ============================================================
@@ -452,10 +487,18 @@ body {
   width: 96px;
   height: 96px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--indigo), var(--crimson));
+  background: var(--indigo);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+.avatar-circle img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .avatar-circle svg {
@@ -467,6 +510,28 @@ body {
 .profile-email {
   font-size: 15px;
   color: var(--muted);
+}
+
+.profile-username-input {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.profile-username-input::placeholder {
+  color: var(--muted);
+}
+
+.profile-username-input:focus {
+  border-color: var(--crimson);
 }
 
 .logout-btn {
@@ -643,11 +708,12 @@ body {
 /* Chat message styles */
 .messages { position: relative; }
 .msg-row { display: flex; gap: 10px; align-items: flex-start; padding: 6px 12px; }
-.msg-row.own { justify-content: flex-end; flex-direction: row-reverse; }
+.msg-row.grouped { margin-top: -8px; }
+.msg-row.own { justify-content: flex-start; flex-direction: row-reverse; }
 .msg-row.other { justify-content: flex-start; flex-direction: row; }
 .msg-meta { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 40px; }
 .msg-avatar { width: 28px; height: 28px; border-radius: 6px; object-fit: cover; }
-.msg-wrap { max-width: 50vw; position: relative; align-self: flex-start; }
+.msg-wrap { max-width: min(56vw, 440px); position: relative; align-self: flex-start; }
 .msg-wrap .msg-username { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 .msg-row.other .msg-wrap .msg-username { text-align: left; }
 .msg-row.own .msg-wrap .msg-username { text-align: right; }
@@ -656,15 +722,55 @@ body {
 .other-bubble { background: linear-gradient(135deg, #2b2b3a, #1f1f2b); color: #fff; border-radius: 16px 16px 16px 4px; }
 .msg-reply { background: rgba(255,255,255,0.04); padding: 6px 8px; border-radius: 8px; margin-bottom: 6px; cursor: pointer; }
 .msg-reply-text { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
-.bubble-actions { position: absolute; right: -10px; top: -6px; display: flex; gap: 6px; background: transparent; }
-.bubble-actions .action { padding: 6px 8px; border-radius: 999px; border: none; background: rgba(0,0,0,0.4); color: #fff; cursor: pointer; }
-.bubble-actions .action svg { width: 14px; height: 14px; stroke: #fff; }
 
-/* Position actions slightly outside the bubble without overlapping */
-.msg-row.other .bubble-actions { right: -44px; left: auto; }
-.msg-row.own .bubble-actions { left: -44px; right: auto; }
+/* Copy/reply actions float just above the bubble so they never overlap its
+   text, and animate in with a satisfying pop rather than snapping in. */
+.bubble-actions {
+  position: absolute;
+  top: -38px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(6px) scale(0.9);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 
-/* Spinner used when loading more messages */
+.bubble-actions.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.msg-row.own .bubble-actions { right: 0; }
+.msg-row.other .bubble-actions { left: 0; }
+
+.bubble-actions .action {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-alt);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+.bubble-actions .action:hover {
+  background: var(--panel);
+}
+
+.bubble-actions .action svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--text);
+}
+
+/* Spinner used when loading more messages, and for full-screen loading states */
 .spinner {
   width: 20px;
   height: 20px;
@@ -674,7 +780,51 @@ body {
   animation: spin 1s linear infinite;
   margin: 0 auto;
 }
+.spinner-lg {
+  width: 36px;
+  height: 36px;
+  border-width: 3px;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Full-screen loading state (e.g. waiting on the initial auth check) */
+.app-loading {
+  flex: 1 1 auto;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Onboarding: bold, unmissable notice that the clan choice is permanent */
+.onboarding-warning {
+  background: rgba(245, 166, 35, 0.1);
+  border: 1px solid rgba(245, 166, 35, 0.4);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 10px;
+}
+
+.onboarding-warning strong {
+  color: var(--gold);
+}
+
+.onboarding-footer {
+  margin-top: 16px;
+  opacity: 0.8;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.profile-clan {
+  font-size: 13px;
+  color: var(--gold);
+  font-weight: 600;
+}
 
 /* Placeholder skeleton styles */
 .placeholder { background: rgba(255,255,255,0.03); border-radius: 8px; height: 12px; }

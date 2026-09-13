@@ -37,6 +37,10 @@ export async function createOrUpdateUserDoc(user) {
   const ref = doc(db, "users", user.uid);
   const snap = await getDoc(ref);
   const now = ts();
+  // Firestore rejects serverTimestamp() sentinels nested inside array
+  // elements, so entries pushed into the `groups` array need a plain,
+  // client-generated Date instead of the ts() sentinel used elsewhere.
+  const arrayTs = new Date();
   if (!snap.exists()) {
     // new user: create doc and auto-join General group
     await setDoc(ref, {
@@ -45,7 +49,7 @@ export async function createOrUpdateUserDoc(user) {
       lastLogin: now,
       createdAt: now,
       groups: [
-        { name: "General group", type: "general", joinedAt: now },
+        { name: "General group", type: "general", joinedAt: arrayTs },
       ],
     });
     return { isNew: true };
@@ -55,7 +59,7 @@ export async function createOrUpdateUserDoc(user) {
     const groups = data.groups || [];
     const hasGeneral = groups.some((g) => g && g.name === "General group");
     if (!hasGeneral) {
-      const newGroups = [...groups, { name: "General group", type: "general", joinedAt: now }];
+      const newGroups = [...groups, { name: "General group", type: "general", joinedAt: arrayTs }];
       await updateDoc(ref, { lastLogin: now, groups: newGroups });
     } else {
       await updateDoc(ref, { lastLogin: now });
@@ -78,19 +82,20 @@ export async function joinGroup(uid, groupName, type = "exclusive") {
   if (!snap.exists()) throw new Error("User doc not found");
   const data = snap.data();
   const groups = data.groups || [];
-  const now = ts();
+  // Array elements can't hold a serverTimestamp() sentinel — use a plain Date.
+  const joinedAt = new Date();
 
   // If joining general, ensure it's present
   if (type === "general") {
     if (groups.some((g) => g && g.name === groupName)) return;
-    const newGroups = [...groups, { name: groupName, type: "general", joinedAt: now }];
+    const newGroups = [...groups, { name: groupName, type: "general", joinedAt }];
     await updateDoc(ref, { groups: newGroups });
     return;
   }
 
   // exclusive: remove any other exclusive groups
   const filtered = groups.filter((g) => !(g && g.type === "exclusive"));
-  filtered.push({ name: groupName, type: "exclusive", joinedAt: now });
+  filtered.push({ name: groupName, type: "exclusive", joinedAt });
   await updateDoc(ref, { groups: filtered });
 }
 
