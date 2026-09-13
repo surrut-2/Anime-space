@@ -14,17 +14,22 @@ import {
 } from "./auth";
 import { useToast } from "./toast.jsx";
 import { sendGroupMessage, listenGroupMessages, loadOlderMessages } from "./messages";
+import { submitFeedback } from "./feedback";
 
 const GENERAL_GROUP = "General group";
 
 const GROUPS = [
-  { id: 1, name: GENERAL_GROUP, type: "general" },
-  { id: 2, name: "Bleach", type: "exclusive" },
-  { id: 3, name: "Naruto", type: "exclusive" },
-  { id: 4, name: "One Piece", type: "exclusive" },
+  { id: 1, name: GENERAL_GROUP, type: "general", icon: "/group-icons/general.jpg" },
+  { id: 2, name: "Bleach", type: "exclusive", icon: "/group-icons/bleach.jpg" },
+  { id: 3, name: "Naruto", type: "exclusive", icon: "/group-icons/naruto.jpg" },
+  { id: 4, name: "One Piece", type: "exclusive", icon: "/group-icons/one-piece.jpg" },
 ];
 
 const EXCLUSIVE_GROUPS = GROUPS.filter((g) => g.type === "exclusive");
+
+function iconForGroup(name) {
+  return GROUPS.find((g) => g.name === name)?.icon || null;
+}
 
 // Splits message text into text/link pieces. A |url| pair is treated as an
 // explicit link (inserted via the toolbar's link button); bare http(s)/www
@@ -123,6 +128,21 @@ const ReplyIcon = () => (
   </svg>
 );
 
+// AnimeSpace mark: a torii gate (crimson) standing in front of a portal
+// ring (gold) - matches public/favicon.png / logo-mark.png pixel-for-pixel
+// (same 0-100 coordinate scheme), so this is the vector source of truth for
+// anywhere the mark needs to render crisply in the UI itself.
+const AppLogo = ({ size = 40 }) => (
+  <svg className="app-logo" viewBox="0 0 100 100" width={size} height={size} aria-hidden="true">
+    <circle cx="50" cy="58" r="28" fill="none" stroke="var(--gold)" strokeWidth="7" />
+    <rect x="16" y="20" width="68" height="7" rx="3.5" fill="var(--crimson)" />
+    <rect x="25" y="32" width="50" height="5" rx="2.5" fill="var(--crimson)" />
+    <rect x="31" y="32" width="6" height="34" rx="3" fill="var(--crimson)" />
+    <rect x="63" y="32" width="6" height="34" rx="3" fill="var(--crimson)" />
+    <circle cx="50" cy="58" r="3" fill="#ffebc8" />
+  </svg>
+);
+
 const GoogleLogo = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
     <path fill="#EA4335" d="M12 10.2v3.6h5.1c-.2 1.2-.9 2.3-2 3.1l3.2 2.5c1.9-1.7 3-4.2 3-7.2 0-.7-.1-1.4-.2-2.1H12z" />
@@ -180,7 +200,11 @@ function GroupsScreen({ userDoc, onOpenChat, onOpenProfile, latestPerGroup, acti
               className={`group-card ${activeGroup === item.name ? "active" : ""}`}
               onClick={() => onOpenChat(item.name)}
             >
-              <div className="group-avatar">{item.name.charAt(0)}</div>
+              {iconForGroup(item.name) ? (
+                <img className="group-avatar" src={iconForGroup(item.name)} alt="" />
+              ) : (
+                <div className="group-avatar">{item.name.charAt(0)}</div>
+              )}
               <div className="group-copy">
                 <strong>{item.name}</strong>
                 {loading ? (
@@ -202,6 +226,7 @@ function OnboardingScreen({ user, groups, onChoose, submitting }) {
     <section className="screen">
       <div className="auth-screen">
         <div className="auth-heading">
+          <AppLogo size={48} />
           <h1>Pick your clan</h1>
           <div className="onboarding-warning">
             <strong>Once you choose a group, it becomes your clan and cannot be changed.</strong>
@@ -216,7 +241,11 @@ function OnboardingScreen({ user, groups, onChoose, submitting }) {
               onClick={() => onChoose(group)}
               disabled={submitting}
             >
-              <div className="group-avatar">{group.name.charAt(0)}</div>
+              {group.icon ? (
+                <img className="group-avatar" src={group.icon} alt="" />
+              ) : (
+                <div className="group-avatar">{group.name.charAt(0)}</div>
+              )}
               <div className="group-copy">
                 <strong>{group.name}</strong>
                 <small>Exclusive clan</small>
@@ -466,8 +495,32 @@ function ChatScreen({ group, onBack, showBack = true, onSend, user, username }) 
 function ProfileScreen({ user, userDoc, onLogout, onUpdateUsername }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
+  const [feedbackText, setFeedbackText] = useState("");
+  const [sendingFeedback, setSendingFeedback] = useState(false);
+  const { showToast } = useToast();
 
   const clanName = userDoc?.groupData?.groupName;
+
+  async function handleSendFeedback() {
+    const text = feedbackText.trim();
+    if (!text || sendingFeedback) return;
+    setSendingFeedback(true);
+    try {
+      await submitFeedback({
+        uid: user.uid,
+        username: userDoc?.username || user.displayName || "",
+        clan: clanName || null,
+        text,
+      });
+      setFeedbackText("");
+      showToast("Thanks for the feedback!", "success");
+    } catch (error) {
+      console.error("feedback submit failed", error);
+      showToast("Failed to send feedback", "error");
+    } finally {
+      setSendingFeedback(false);
+    }
+  }
 
   return (
     <section className="screen">
@@ -481,9 +534,9 @@ function ProfileScreen({ user, userDoc, onLogout, onUpdateUsername }) {
           {clanName && <div className="profile-clan">Clan: {clanName}</div>}
           <div style={{ width: "100%", textAlign: "center" }}>
             {!editing ? (
-              <div>
-                <div style={{ color: "var(--muted)", marginBottom: 8 }}>{userDoc && userDoc.username ? `@${userDoc.username}` : "No username set"}</div>
-                <button type="button" className="logout-btn" onClick={() => { setName((userDoc && userDoc.username) || ""); setEditing(true); }} style={{ marginBottom: 8 }}>Edit username</button>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                <div style={{ color: "var(--muted)" }}>{userDoc && userDoc.username ? `@${userDoc.username}` : "No username set"}</div>
+                <button type="button" className="logout-btn" onClick={() => { setName((userDoc && userDoc.username) || ""); setEditing(true); }}>Edit username</button>
                 <button type="button" className="logout-btn" onClick={onLogout}>Log out</button>
               </div>
             ) : (
@@ -495,6 +548,25 @@ function ProfileScreen({ user, userDoc, onLogout, onUpdateUsername }) {
                 </div>
               </div>
             )}
+          </div>
+
+          <div className="feedback-section">
+            <div className="feedback-label">Feedback for the developers</div>
+            <textarea
+              className="feedback-input"
+              value={feedbackText}
+              onChange={(event) => setFeedbackText(event.target.value)}
+              placeholder="What should we improve?"
+              rows={3}
+            />
+            <button
+              type="button"
+              className="btn primary"
+              onClick={handleSendFeedback}
+              disabled={sendingFeedback || !feedbackText.trim()}
+            >
+              {sendingFeedback ? "Sending…" : "Send feedback"}
+            </button>
           </div>
         </div>
       </div>
@@ -527,6 +599,7 @@ function AuthScreen({ onLoginEmail, onCreateAccount, onGoogle, defaultIsSignUp =
     <section className="screen">
       <div className="auth-screen">
         <div className="auth-heading">
+          <AppLogo size={48} />
           <h1>{isSignUp ? "Create account" : "Sign in"}</h1>
           <p>{isSignUp ? "Join your anime circles." : "Welcome back to your anime circles."}</p>
         </div>
@@ -772,6 +845,7 @@ export default function App() {
     <div className={`phone ${isDesktop ? "desktop" : ""}`}>
       {!isDesktop && <div className="statusbar"><span className="brand-mark">AnimeSpace</span></div>}
       {body}
+      <div className="app-footer">victor x IARdays productions</div>
     </div>
   );
 }

@@ -3,17 +3,147 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // This rule allows anyone with your Firestore database reference to view, edit,
-    // and delete all data in your Firestore database. It is useful for getting
-    // started, but it is configured to expire after 30 days because it
-    // leaves your app open to attackers. At that time, all client
-    // requests to your Firestore database will be denied.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnUserDoc(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ---- users/{uid} ----
     //
-    // Make sure to write security rules for your app before that time, or else
-    // all client requests to your Firestore database will be denied until you Update
-    // your rules
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2026, 10, 11);
+    // Doc id is the Firebase Auth uid (see auth.js), not email. Every read
+    // and write in the app is scoped to the signed-in user's own doc - no
+    // screen ever reads another user's profile (chat bubbles show
+    // username/photoURL denormalized onto the message itself, not fetched
+    // from here - see groups/{groupSlug}/messages below). So there's no
+    // `list` grant on this collection at all, only single-document access.
+    match /users/{uid} {
+      allow get: if isOwnUserDoc(uid);
+
+      allow create: if isOwnUserDoc(uid);
+
+      // groupData is the user's "clan". The onboarding screen promises
+      // "Once you choose a group, it becomes your clan and cannot be
+      // changed" (setUserGroupData in auth.js) - that promise is only a
+      // client-side UI choice unless enforced here, and it's now also what
+      // gates access to a clan's chat (see isClanMember below), so letting
+      // a client freely rewrite their own groupData would let them grant
+      // themselves access to any clan's chat at will.
+      //
+      // request.resource.data is the FULL resulting document for an update
+      // (Firestore merges the patch before rule evaluation), so any update
+      // that doesn't touch groupData automatically satisfies the first
+      // clause below - this only blocks changing an *existing* groupData,
+      // or setting it to something other than one of the current clans.
+      allow update: if isOwnUserDoc(uid) &&
+        (request.resource.data.get('groupData', null) == resource.data.get('groupData', null) ||
+         (resource.data.get('groupData', null) == null &&
+          request.resource.data.groupData.groupName in ['Bleach', 'Naruto', 'One Piece']));
+
+      allow delete: if false; // no account-deletion flow exists
+    }
+
+    // ---- groups/{groupSlug}/messages/{messageId} ----
+    //
+    // There is no groups/{groupSlug} document - "groups" are a hardcoded
+    // client-side list (GROUPS in App.jsx); the path only namespaces each
+    // group's messages subcollection (see groupSlug() in messages.js).
+    //
+    // Every user is auto-joined to General at signup (createOrUpdateUserDoc)
+    // independent of onboarding, so General is always readable/writable.
+    // Every other group is a user's one locked-in clan
+    // (users/{uid}.groupData.groupName, immutable per the rule above) -
+    // that's what stops a signed-in user from reading or posting into a
+    // clan's chat they never joined, which the client alone doesn't
+    // prevent: GroupsScreen simply never renders a way to open another
+    // clan's chat, but nothing in messages.js stops a client from calling
+    // sendGroupMessage/listenGroupMessages with an arbitrary group name
+    // directly.
+    //
+    // slugFor() must be kept in sync with groupSlug() in messages.js and
+    // the GROUPS list in App.jsx. Both are a fixed, closed set of four
+    // groups, not user-generated, so a plain string map is simpler and
+    // less failure-prone here than replicating the JS slugify regex in
+    // rules - if a group is renamed or added, update both places.
+    function slugFor(name) {
+      return name == 'General group' ? 'general-group'
+        : name == 'Bleach' ? 'bleach'
+        : name == 'Naruto' ? 'naruto'
+        : name == 'One Piece' ? 'one-piece'
+        : name;
+    }
+
+    // A single get() on the *requester's own* profile - not per matched
+    // message - so this stays provable for list()/onSnapshot() queries too
+    // (unlike a get() that would need to run per candidate document).
+    function isClanMember(groupSlug) {
+      let clanName = get(/databases/$(database)/documents/users/$(request.auth.uid))
+        .data.get('groupData', {}).get('groupName', null);
+      return groupSlug == 'general-group' || (clanName != null && slugFor(clanName) == groupSlug);
+    }
+
+    match /groups/{groupSlug}/messages/{messageId} {
+      allow read: if isSignedIn() && isClanMember(groupSlug);
+
+      // uid must match the caller - stops a client from spoofing another
+      // user's identity on a message, which drives isOwn bubble styling
+      // and reply attribution for every reader in the group.
+      allow create: if isSignedIn() && isClanMember(groupSlug) &&
+        request.resource.data.uid == request.auth.uid;
+
+      // No edit/delete flow exists in the UI - messages are immutable
+      // once sent.
+      allow update, delete: if false;
+    }
+
+    // Checked by feedback/{feedbackId} below - defined here, before its
+    // first use, alongside the other rule-evaluation helpers.
+    function isUnlockedAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/adminUnlocks/$(request.auth.uid));
+    }
+
+    // ---- feedback/{feedbackId} ----
+    //
+    // One-way box: any signed-in user can submit feedback about
+    // themselves (ProfileScreen in App.jsx), but nobody - not even the
+    // author - can read it back through the normal app. Only an unlocked
+    // admin session (see adminUnlocks below) can list it, via AdminApp.jsx.
+    match /feedback/{feedbackId} {
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow list, get: if isUnlockedAdmin();
+      allow update, delete: if false;
+    }
+
+    // ---- admin/gate ----
+    //
+    // Single doc holding the real admin passcode (see AdminApp.jsx). Never
+    // directly readable or writable by any client - `allow read, write: if
+    // false` here does not stop the rules below from reading it via get(),
+    // because get()/exists() calls made *from another rule* evaluate
+    // against the target document's data directly and do not re-run the
+    // target document's own rules.
+    match /admin/gate {
+      allow read, write: if false;
+    }
+
+    // ---- adminUnlocks/{uid} ----
+    //
+    // "Logging into" /admin (AdminApp.jsx) is nothing but this write
+    // succeeding: the client submits the typed passcode as this doc's own
+    // `passcode` field, and the rule rejects the write outright unless it
+    // equals admin/gate's real value - so the correct passcode is checked
+    // server-side, and the real value never has to be shipped in the JS
+    // bundle to check it there. A later visit with the same uid (anonymous
+    // auth persists per-browser) finds this doc already exists and skips
+    // the prompt.
+    match /adminUnlocks/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow create, update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.passcode == get(/databases/$(database)/documents/admin/gate).data.passcode;
+      allow delete: if false;
     }
   }
 }

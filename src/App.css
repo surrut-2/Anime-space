@@ -294,6 +294,7 @@ body {
   font-size: 18px;
   color: #0a0a10;
   background: var(--gold);
+  object-fit: cover; /* no-op on the letter-badge div fallback, crops the img variant */
 }
 
 .group-copy {
@@ -381,23 +382,31 @@ body {
 }
 
 .messages::-webkit-scrollbar,
-.group-list::-webkit-scrollbar {
+.group-list::-webkit-scrollbar,
+.profile-body::-webkit-scrollbar,
+.auth-screen::-webkit-scrollbar {
   width: 8px;
 }
 
 .messages::-webkit-scrollbar-track,
-.group-list::-webkit-scrollbar-track {
+.group-list::-webkit-scrollbar-track,
+.profile-body::-webkit-scrollbar-track,
+.auth-screen::-webkit-scrollbar-track {
   background: transparent;
 }
 
 .messages::-webkit-scrollbar-thumb,
-.group-list::-webkit-scrollbar-thumb {
+.group-list::-webkit-scrollbar-thumb,
+.profile-body::-webkit-scrollbar-thumb,
+.auth-screen::-webkit-scrollbar-thumb {
   background: var(--line);
   border-radius: 999px;
 }
 
 .messages::-webkit-scrollbar-thumb:hover,
-.group-list::-webkit-scrollbar-thumb:hover {
+.group-list::-webkit-scrollbar-thumb:hover,
+.profile-body::-webkit-scrollbar-thumb:hover,
+.auth-screen::-webkit-scrollbar-thumb:hover {
   background: var(--panel-alt);
 }
 
@@ -469,21 +478,33 @@ body {
    ============================================================ */
 .profile-screen {
   flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
 .profile-body {
   flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* flex-start, not center: with overflow, centering a flex container
+     pushes any content taller than the box off both edges equally, and the
+     portion pushed off the *start* edge is unreachable by scrolling - only
+     the end-edge overflow can be scrolled to. flex-start keeps everything
+     reachable regardless of content height. */
+  justify-content: flex-start;
   gap: 16px;
-  padding: 0 24px;
+  padding: 28px 24px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
 
+
 .avatar-circle {
+  flex: 0 0 auto;
   width: 96px;
   height: 96px;
   border-radius: 50%;
@@ -556,11 +577,23 @@ body {
    ============================================================ */
 .auth-screen {
   flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 0 28px;
+  /* See the comment on .profile-body - flex-start instead of center keeps
+     everything reachable by scrolling when content overflows. */
+  justify-content: flex-start;
+  padding: 28px 28px 24px;
   gap: 22px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+
+.app-logo {
+  display: block;
+  margin-bottom: 12px;
 }
 
 .auth-heading h1 {
@@ -824,6 +857,57 @@ body {
   font-size: 13px;
   color: var(--gold);
   font-weight: 600;
+}
+
+.feedback-section {
+  width: 100%;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.feedback-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.feedback-input {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  outline: none;
+  resize: vertical;
+  min-height: 64px;
+}
+
+.feedback-input::placeholder {
+  color: var(--muted);
+}
+
+.feedback-input:focus {
+  border-color: var(--crimson);
+}
+
+.app-footer {
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 6px 0 8px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  opacity: 0.3;
+  background: var(--bg);
+  user-select: none;
 }
 
 /* Placeholder skeleton styles */
