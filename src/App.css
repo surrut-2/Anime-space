@@ -594,6 +594,8 @@ body {
 .app-logo {
   display: block;
   margin-bottom: 12px;
+  border-radius: 22%;
+  object-fit: cover;
 }
 
 .auth-heading h1 {

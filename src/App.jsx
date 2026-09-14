@@ -128,19 +128,13 @@ const ReplyIcon = () => (
   </svg>
 );
 
-// AnimeSpace mark: a torii gate (crimson) standing in front of a portal
-// ring (gold) - matches public/favicon.png / logo-mark.png pixel-for-pixel
-// (same 0-100 coordinate scheme), so this is the vector source of truth for
-// anywhere the mark needs to render crisply in the UI itself.
+// AnimeSpace mark - same asset as the favicon/general-group icon
+// (public/logo-mark.png, generated from newicon.jpg with rounded corners
+// baked in). .app-logo also applies a CSS border-radius as a defensive
+// backstop in case this ever renders somewhere without the transparent
+// rounded PNG corners already doing the job.
 const AppLogo = ({ size = 40 }) => (
-  <svg className="app-logo" viewBox="0 0 100 100" width={size} height={size} aria-hidden="true">
-    <circle cx="50" cy="58" r="28" fill="none" stroke="var(--gold)" strokeWidth="7" />
-    <rect x="16" y="20" width="68" height="7" rx="3.5" fill="var(--crimson)" />
-    <rect x="25" y="32" width="50" height="5" rx="2.5" fill="var(--crimson)" />
-    <rect x="31" y="32" width="6" height="34" rx="3" fill="var(--crimson)" />
-    <rect x="63" y="32" width="6" height="34" rx="3" fill="var(--crimson)" />
-    <circle cx="50" cy="58" r="3" fill="#ffebc8" />
-  </svg>
+  <img className="app-logo" src="/logo-mark.png" alt="" width={size} height={size} />
 );
 
 const GoogleLogo = () => (
